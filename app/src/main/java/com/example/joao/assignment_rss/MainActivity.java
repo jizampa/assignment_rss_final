@@ -1,34 +1,32 @@
 package com.example.joao.assignment_rss;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.support.v4.view.MenuCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-
 public class MainActivity extends AppCompatActivity {
 
 
@@ -44,28 +42,28 @@ public class MainActivity extends AppCompatActivity {
         RssTask rssTask = new RssTask();
         rssTask.execute();
 
-        // 2 fase
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+
+        getMenuInflater().inflate(R.menu.rss_menu, menu);
 
 
-//        int i = 0;
-//        for (String news : title)
-//        {
-//            i+=1;
-//            News newsToInsert = new News(news);
-//            arrayOfNews.add(newsToInsert);
-//        }
-//        newsAdapter = new NewsAdapter(this, R.layout.list_item, arrayOfNews);
+        return true;
 
-//********************************************************
+
     }
 
     class News {
         private String title;
         private String subtitle;
+        private String html;
 
-        public News (String title, String subtitle){
+        public News (String title, String subtitle, String html){
             this.title = title.trim();
             this.subtitle = subtitle.trim();
+            this.html = html;
         }
 
         public String getTitle() {
@@ -75,23 +73,11 @@ public class MainActivity extends AppCompatActivity {
         public String getSubtitle() {
             return subtitle;
         }
+        public String getHtml() {return html;}
     }
-//
-//    private class NewsAdapter extends ArrayAdapter<News> {
-//
-//        private ArrayList<News> items;
-//
-//        public NewsAdapter(Context context, int textViewResourceId, ArrayList<News> items) {
-//            super(context, textViewResourceId, items);
-//            this.items = items;
-//        }
-//    }
 
-    //********************************************************************
-    //nested async task to download and parse RSS feed
     class RssTask extends AsyncTask<Void, Void, Void> {
         private SAXParser saxParser;
-
 
         //has UI thread access
         @Override
@@ -106,53 +92,30 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... voids) {
 
-            //use factory to create parser
+            URL url = null;
+            HttpURLConnection httpURLConnection = null;
+            InputStream inputStream = null;
+
             try {
                 saxParser = SAXParserFactory.newInstance().newSAXParser();
+                url = new URL("https://www.winnipegfreepress.com/rss/");
+                httpURLConnection = (HttpURLConnection)url.openConnection();
+                inputStream = httpURLConnection.getInputStream();
+                NewsHandler newsHandler = new NewsHandler();
+                saxParser.parse(inputStream, newsHandler);
+
+
             } catch (ParserConfigurationException e) {
                 e.printStackTrace();
             } catch (SAXException e) {
                 e.printStackTrace();
             }
-
-            //URL object for RSS or Atom feed location
-            URL url = null;
-            try {
-                url = new URL("https://www.winnipegfreepress.com/rss/");
-            } catch (MalformedURLException e) {
+            catch (MalformedURLException e) {
                 e.printStackTrace();
             }
-
-            //open the HTTP connection and get the input stream
-            HttpURLConnection httpURLConnection = null;
-            InputStream inputStream = null;
-            try {
-                httpURLConnection = (HttpURLConnection)url.openConnection();
-                inputStream = httpURLConnection.getInputStream();
-            } catch (IOException e) {
+             catch (IOException e) {
                 e.printStackTrace();
             }
-
-            //create our custom handler
-            NewsHandler newsHandler = new NewsHandler();
-
-            //parse the RSS input stream using our custom handler!
-            try {
-                saxParser.parse(inputStream, newsHandler);
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (SAXException e) {
-                e.printStackTrace();
-            }
-
-            /*try {
-                Thread.sleep(5000); //5 second sleep
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }*/
-
 
             return null;
         }
@@ -165,7 +128,6 @@ public class MainActivity extends AppCompatActivity {
             //ArrayList<News> test = arrayOfNews;
 
             listViewPopulation(arrayOfNews);
-
         }
     } //asynctask
 
@@ -188,13 +150,13 @@ public class MainActivity extends AppCompatActivity {
             News o = arrayfNews.get(position);
             if (o != null) {
                 TextView tt = v.findViewById(R.id.toptext);
-                TextView bt = v.findViewById(R.id.bottomtext);
+               // TextView bt = v.findViewById(R.id.bottomtext);
                 if (tt != null) {
                     tt.setText(o.getTitle());
                 }
-                if (bt != null) {
-                    bt.setText(o.getSubtitle());
-                }
+//                if (bt != null) {
+//                    bt.setText(o.getSubtitle());
+//                }
             }
             return v;
         }
@@ -202,19 +164,9 @@ public class MainActivity extends AppCompatActivity {
 
     //class that defines how the SAXParser will parse
     class NewsHandler extends DefaultHandler {
-        //ArrayList to hold titles of articles
-        //private ArrayList<String> title;
-        //Better to have an ArrayList of FeedItem or NewsItem (custom class objects)
 
-        //boolean flags to keep track of which elements we are in
-        private boolean inItem, inTitle, inDesc;
-
-        //String to build with muliple calls to characters() for one element
-        private String stringTitle, stringSubtitle;
-
-//        public ArrayList<String> getTitle() {
-//            return title;
-//        }
+        private boolean inItem, inTitle, inDesc, inLink;
+        private String stringTitle, stringSubtitle, stringHtml;
 
         @Override
         public void startDocument() throws SAXException {
@@ -227,7 +179,6 @@ public class MainActivity extends AppCompatActivity {
         public void endDocument() throws SAXException {
             super.endDocument();
             Log.d("JZ", "endDocument - contents of title arraylist:");
-            //makeNews();
         }
 
         @Override
@@ -238,12 +189,14 @@ public class MainActivity extends AppCompatActivity {
                 inItem = true;
             } else if (inItem && qName.equals("title")) {
                 inTitle = true;
-                stringTitle = new String();
-            } else if (inItem && qName.equals("description")){
+                stringTitle = "";
+            } else if (inItem && qName.equals("description")) {
                 inDesc = true;
-
+                stringSubtitle= "";
+            } else if (inItem && qName.equals("link")) {
+                inLink = true;
+                stringHtml= "";
             }
-
         }
 
         @Override
@@ -255,33 +208,33 @@ public class MainActivity extends AppCompatActivity {
                 inItem = false;
             } else if (inItem && qName.equals("title")) {
                 inTitle = false;
-                //add the title to the title array
-                //title.add(stringTitle);
-            } else if (inItem && qName.equals("description")){
+            } else if (inItem && qName.equals("link")){
+                inLink= false;
+            }else if (inItem && qName.equals("description")){
                 inDesc= false;
-                News newNews = new News(stringTitle,stringSubtitle);
+                News newNews = new News(stringTitle,stringSubtitle,stringHtml);
                 arrayOfNews.add(newNews);
                 stringTitle = "";
                 stringSubtitle = "";
+                stringHtml="";
             }
+
         }
 
         @Override
         public void characters(char[] ch, int start, int length) throws SAXException {
             super.characters(ch, start, length);
-            //just for debugging...
-            //String s = new String(ch, start, length);
-            //Log.d("Jody", "characters: " + s);
 
-            String s, ss = "";
+            String s, ss, sl = "";
 
-            //check flags set by start/endElement()
             if (inTitle) {
                 s = new String(ch, start, length);
                 stringTitle += s;
                 s = "";
-                //Use a StringBuilder instead of just Strings
-                //stringBuilder.append(ch, start, length);
+            }
+            else if (inLink){
+                sl = new String(ch, start, length);
+                stringHtml += sl;
             }
             else if (inDesc){
                 ss = new String(ch, start, length);
@@ -295,6 +248,19 @@ public class MainActivity extends AppCompatActivity {
 
         listView = findViewById(R.id.my_list_view);
         listView.setAdapter(newsAdapter);
+
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+
+                Intent intent = new Intent(MainActivity.this, DisplayNews.class);
+                intent.putExtra("title", arrayOfNews.get(i).getTitle() );
+                intent.putExtra("subtitle", arrayOfNews.get(i).getSubtitle());
+                intent.putExtra("link",arrayOfNews.get(i).getHtml());
+                startActivity(intent);
+            }
+        });
     }
 
 }
