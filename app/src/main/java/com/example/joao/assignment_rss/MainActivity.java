@@ -41,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
 
         RssTask rssTask = new RssTask();
         rssTask.execute();
-
     }
 
     @Override
@@ -49,10 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
         getMenuInflater().inflate(R.menu.rss_menu, menu);
 
-
         return true;
-
-
     }
 
     class News {
@@ -92,17 +88,28 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... voids) {
 
-            URL url = null;
+//            URL url1, url2 = null;
             HttpURLConnection httpURLConnection = null;
             InputStream inputStream = null;
+            URL[] urlArray;
 
             try {
-                saxParser = SAXParserFactory.newInstance().newSAXParser();
-                url = new URL("https://www.winnipegfreepress.com/rss/");
-                httpURLConnection = (HttpURLConnection)url.openConnection();
-                inputStream = httpURLConnection.getInputStream();
-                NewsHandler newsHandler = new NewsHandler();
-                saxParser.parse(inputStream, newsHandler);
+
+                urlArray = new URL[2];
+                urlArray[0] = new URL("https://www.winnipegfreepress.com/rss/");
+                urlArray[1] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
+                arrayOfNews = new ArrayList<News>(10);
+
+
+
+                for (URL url : urlArray) {
+
+                    saxParser = SAXParserFactory.newInstance().newSAXParser();
+                    httpURLConnection = (HttpURLConnection) url.openConnection();
+                    inputStream = httpURLConnection.getInputStream();
+                    NewsHandler newsHandler = new NewsHandler();
+                    saxParser.parse(inputStream, newsHandler);
+                }
 
 
             } catch (ParserConfigurationException e) {
@@ -124,8 +131,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            Log.d("Jody", "post execute!" );
-            //ArrayList<News> test = arrayOfNews;
 
             listViewPopulation(arrayOfNews);
         }
@@ -172,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
         public void startDocument() throws SAXException {
             super.startDocument();
             Log.d("JZ", "startDocument");
-            arrayOfNews = new ArrayList<News>(10);
+           // arrayOfNews = new ArrayList<News>(10);
         }
 
         @Override
