@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+
 public class MainActivity extends AppCompatActivity {
 
 
@@ -34,13 +36,13 @@ public class MainActivity extends AppCompatActivity {
     private NewsAdapter newsAdapter;
     private ListView listView;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        RssTask rssTask = new RssTask();
-        rssTask.execute();
+        StartRsstask();
     }
 
     @Override
@@ -49,6 +51,18 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.rss_menu, menu);
 
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        StartRsstask();
+        return true;
+    }
+
+    private void StartRsstask(){
+        RssTask rssTask = new RssTask();
+        rssTask.execute();
     }
 
     class News {
@@ -96,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
             try {
 
                 urlArray = new URL[2];
-                urlArray[0] = new URL("https://www.winnipegfreepress.com/rss/");
+                urlArray[0] = new URL("https://www.thestar.com/content/thestar/feed.RSSManagerServlet.topstories.rss");
                 urlArray[1] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
                 arrayOfNews = new ArrayList<News>(10);
 
@@ -217,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
                 inLink= false;
             }else if (inItem && qName.equals("description")){
                 inDesc= false;
-                News newNews = new News(stringTitle,stringSubtitle,stringHtml);
+                News newNews = new News(stringTitle.trim(),stringSubtitle.trim(),stringHtml.trim());
                 arrayOfNews.add(newNews);
                 stringTitle = "";
                 stringSubtitle = "";

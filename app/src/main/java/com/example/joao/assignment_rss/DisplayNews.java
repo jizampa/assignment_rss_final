@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Html;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -24,8 +25,8 @@ public class DisplayNews extends AppCompatActivity {
         newsSubtitle = findViewById(R.id.tv_dis_news_subtitle);
         intent = getIntent();
 
-        newsTitle.setText(intent.getStringExtra("title"));
-        newsSubtitle.setText(intent.getStringExtra("subtitle"));
+        newsTitle.setText(Html.fromHtml(intent.getStringExtra("title"),Html.FROM_HTML_MODE_LEGACY));
+        newsSubtitle.setText(Html.fromHtml(intent.getStringExtra("subtitle"),Html.FROM_HTML_MODE_LEGACY));
 
         btnTest= findViewById(R.id.button);
 
