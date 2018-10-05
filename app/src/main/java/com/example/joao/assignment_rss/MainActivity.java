@@ -2,10 +2,13 @@ package com.example.joao.assignment_rss;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.support.v4.view.MenuCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -14,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import org.xml.sax.Attributes;
@@ -35,12 +39,28 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<News> arrayOfNews;
     private NewsAdapter newsAdapter;
     private ListView listView;
+    URL[] urlArray;
+    boolean isUppercaseSet=false;
+    private SharedPreferences mainActivitySharedPref;
+    private Boolean isBtVisile;
+    Menu myMEnu;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        urlArray = new URL[2];
+
+
+        try {
+            urlArray[0] = new URL("https://www.thestar.com/content/thestar/feed.RSSManagerServlet.topstories.rss");
+            urlArray[1] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
 
         StartRsstask();
     }
@@ -48,7 +68,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
 
-        getMenuInflater().inflate(R.menu.rss_menu, menu);
+      getMenuInflater().inflate(R.menu.rss_menu, menu);
+
+      myMEnu = menu;
+
 
         return true;
     }
@@ -56,13 +79,40 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
+        try {
+            switch (item.getItemId()) {
+                case R.id.btn_refresh:
+                    break;
+                case R.id.im_CBC:
+                    urlArray = new URL[2];
+                    urlArray[0] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
+                    break;
+                case R.id.im_the_star:
+                    urlArray = new URL[2];
+                    urlArray[0] = new URL("https://www.thestar.com/content/thestar/feed.RSSManagerServlet.topstories.rss");
+                    break;
+                case R.id.im_all_news:
+                    urlArray = new URL[2];
+                    urlArray[0] = new URL("https://www.thestar.com/content/thestar/feed.RSSManagerServlet.topstories.rss");
+                    urlArray[1] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
+                    break;
+                case R.id.im_settings:
+                    int requestCode = 1;
+                    Intent intentSettings = new Intent(MainActivity.this, Settings.class);
+                    startActivity(intentSettings);
+            }
+        }catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
         StartRsstask();
+
         return true;
     }
 
     private void StartRsstask(){
         RssTask rssTask = new RssTask();
         rssTask.execute();
+
     }
 
     class News {
@@ -77,6 +127,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public String getTitle() {
+            if (isUppercaseSet)
+            {
+                title =title.toUpperCase();
+            }
             return title;
         }
 
@@ -102,29 +156,22 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... voids) {
 
-//            URL url1, url2 = null;
             HttpURLConnection httpURLConnection = null;
             InputStream inputStream = null;
-            URL[] urlArray;
 
             try {
 
-                urlArray = new URL[2];
-                urlArray[0] = new URL("https://www.thestar.com/content/thestar/feed.RSSManagerServlet.topstories.rss");
-                urlArray[1] = new URL("https://www.cbc.ca/cmlink/rss-topstories");
                 arrayOfNews = new ArrayList<News>(10);
 
-
-
                 for (URL url : urlArray) {
-
-                    saxParser = SAXParserFactory.newInstance().newSAXParser();
-                    httpURLConnection = (HttpURLConnection) url.openConnection();
-                    inputStream = httpURLConnection.getInputStream();
-                    NewsHandler newsHandler = new NewsHandler();
-                    saxParser.parse(inputStream, newsHandler);
+                    if (url != null) {
+                        saxParser = SAXParserFactory.newInstance().newSAXParser();
+                        httpURLConnection = (HttpURLConnection) url.openConnection();
+                        inputStream = httpURLConnection.getInputStream();
+                        NewsHandler newsHandler = new NewsHandler();
+                        saxParser.parse(inputStream, newsHandler);
+                    }
                 }
-
 
             } catch (ParserConfigurationException e) {
                 e.printStackTrace();
@@ -161,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
+
             View v = convertView;
             if (v == null) {
                 LayoutInflater vi = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -169,16 +217,27 @@ public class MainActivity extends AppCompatActivity {
             News o = arrayfNews.get(position);
             if (o != null) {
                 TextView tt = v.findViewById(R.id.toptext);
-               // TextView bt = v.findViewById(R.id.bottomtext);
+                TextView bt = v.findViewById(R.id.bottomtext);
                 if (tt != null) {
                     tt.setText(o.getTitle());
                 }
-//                if (bt != null) {
-//                    bt.setText(o.getSubtitle());
-//                }
+                if (bt != null && isBtVisile) {
+                    bt.setText(o.getSubtitle());
+                }
             }
             return v;
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("joao","Main activity on resume" );
+        mainActivitySharedPref = getSharedPreferences("general_shared_pref",MODE_PRIVATE);
+
+        isUppercaseSet = mainActivitySharedPref.getBoolean("toUpper",false);
+        isBtVisile = mainActivitySharedPref.getBoolean("isBtVisible",false);
+        StartRsstask();
     }
 
     //class that defines how the SAXParser will parse
@@ -186,12 +245,13 @@ public class MainActivity extends AppCompatActivity {
 
         private boolean inItem, inTitle, inDesc, inLink;
         private String stringTitle, stringSubtitle, stringHtml;
+        int iterator =0;
 
         @Override
         public void startDocument() throws SAXException {
             super.startDocument();
             Log.d("JZ", "startDocument");
-           // arrayOfNews = new ArrayList<News>(10);
+
         }
 
         @Override
@@ -216,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
                 inLink = true;
                 stringHtml= "";
             }
+
         }
 
         @Override
@@ -223,21 +284,25 @@ public class MainActivity extends AppCompatActivity {
             super.endElement(uri, localName, qName);
             Log.d("JZ", "endElement: " + qName);
 
-            if (qName.equals("item")) {
-                inItem = false;
-            } else if (inItem && qName.equals("title")) {
-                inTitle = false;
-            } else if (inItem && qName.equals("link")){
-                inLink= false;
-            }else if (inItem && qName.equals("description")){
-                inDesc= false;
-                News newNews = new News(stringTitle.trim(),stringSubtitle.trim(),stringHtml.trim());
-                arrayOfNews.add(newNews);
-                stringTitle = "";
-                stringSubtitle = "";
-                stringHtml="";
-            }
+            if (iterator < mainActivitySharedPref.getInt("numberOfNews", 20)) {
 
+                if (qName.equals("item")) {
+                    inItem = false;
+                } else if (inItem && qName.equals("title")) {
+                    inTitle = false;
+                } else if (inItem && qName.equals("link")) {
+                    inLink = false;
+                } else if (inItem && qName.equals("description")) {
+                    inDesc = false;
+                    String subTitle = Html.fromHtml(stringSubtitle.trim(), Html.FROM_HTML_MODE_LEGACY).toString();
+                    News newNews = new News(stringTitle.trim(), subTitle, stringHtml.trim());
+                    arrayOfNews.add(newNews);
+                    iterator += 1;
+                    stringTitle = "";
+                    stringSubtitle = "";
+                    stringHtml = "";
+                }
+            }
         }
 
         @Override
@@ -262,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     private void listViewPopulation(ArrayList<News> arrayfNews){
         newsAdapter = new NewsAdapter(this, R.layout.list_item,arrayfNews);
 
@@ -281,5 +347,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
 
 }
